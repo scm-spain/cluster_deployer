@@ -36,7 +36,9 @@ def deploy_microservice(account_name, environment, user_mail, name, version, dep
         security_group_name = deploy[environment]["deploy"]["security_group"]
     else:
         security_group_name = "sgClosed"
-    security_group = conn_ec2.get_all_security_groups(groupnames=security_group_name)[0].id
+    for sg in  conn_ec2.get_all_security_groups():
+        if security_group_name in sg.name:
+            security_group = sg.id
 
     # ami_id
     amis = conn_ec2.get_all_images(filters={'name': name + "-" + version})

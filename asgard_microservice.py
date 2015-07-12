@@ -55,6 +55,7 @@ def create_application(app, asgard_url, user_mail):
         print(r.content)
         return False
 
+
 def create_autoscalinggroup(app, asgard_url, ami, security_group, key_name, role, elbs, instance_type,
                             max_instances, min_instances):
     url = asgard_url + "/" + REGION + "/autoScaling/save"
@@ -98,7 +99,8 @@ def create_autoscalinggroup(app, asgard_url, ami, security_group, key_name, role
     if r.status_code == 200:
         return True
     else:
-        return False
+        print(r.content)
+        exit(1)
 
 def get_next_version(app, asgard_url):
     url = asgard_url + "/" + REGION + "/deployment/prepare/" + app + ".json??deploymentTemplateName=CreateAndCleanUpPreviousAsg&includeEnvironment=true"
@@ -127,7 +129,7 @@ def deploy_version(app, asgard_url, ami, user_mail, version, security_group, key
                 },{
                     "type": "Resize",
                     "targetAsg": "Next",
-                    "capacity": 1,
+                    "capacity": min_instances,
                     "startUpTimeoutMinutes": 10
                 },{
                     "type": "DisableAsg",
@@ -180,7 +182,8 @@ def deploy_version(app, asgard_url, ami, user_mail, version, security_group, key
     if r.status_code == 200:
         return True
     else:
-        return False
+        print(r.content)
+        exit(1)
 
 
 def create_scheduler(auto_scaling_group_name, asgard_url, max_instances, min_instances):
@@ -284,8 +287,9 @@ def asgard_deploy(app, user_mail, ami, security_group, asgard_url, key_name, rol
         create_autoscalinggroup(app=app, asgard_url=asgard_url, ami=ami, security_group=security_group,
                                 key_name=key_name, role=role, elbs=elbs, instance_type=instance_type,
                                 max_instances=max_instances, min_instances=min_instances)
-        if environment is not "pro":
-            create_scheduler(app=app, asgard_url=asgard_url, max_instances=max_instances, min_instances=min_instances)
+        if environment != "pro":
+            create_scheduler(auto_scaling_group_name=app, asgard_url=asgard_url, max_instances=max_instances,
+                             min_instances=min_instances)
     else:
         # create ELB if need it
         if elb:
@@ -303,12 +307,13 @@ def asgard_deploy(app, user_mail, ami, security_group, asgard_url, key_name, rol
             create_autoscalinggroup(app=app, asgard_url=asgard_url, ami=ami, security_group=security_group,
                                     key_name=key_name, role=role, elbs=elbs, instance_type=instance_type,
                                     max_instances=max_instances, min_instances=min_instances)
-            if environment is not "pro":
-                create_scheduler(app, asgard_url, max_instances=max_instances, min_instances=min_instances)
+            if environment != "pro":
+                create_scheduler(auto_scaling_group_name=app, asgard_url=asgard_url, max_instances=max_instances,
+                                 min_instances=min_instances)
         else:
             deploy_version(app=app, asgard_url=asgard_url, ami=ami, user_mail=user_mail, version=version,
                            security_group=security_group, key_name=key_name, role=role, elbs=elbs,
                            instance_type=instance_type, max_instances=max_instances, min_instances=min_instances)
-            if environment is not "pro":
-                create_scheduler(app=app + "-" + version, asgard_url=asgard_url,
+            if environment != "pro":
+                create_scheduler(auto_scaling_group_name=app + "-" + version, asgard_url=asgard_url,
                                  max_instances=max_instances, min_instances=min_instances)
