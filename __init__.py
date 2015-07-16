@@ -46,7 +46,7 @@ def deploy_microservice(account_name, environment, user_mail, name, version, dep
         ami_id = amis[0].id
 
     # role
-    if len(deploy[environment]["dependencies"]) > 0:
+    if "dependencies" in deploy[environment].keys() and len(deploy[environment]["dependencies"]) > 0:
         role = name
     else:
         role = ""
