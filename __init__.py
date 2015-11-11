@@ -41,9 +41,13 @@ def deploy_microservice(account_name, environment, user_mail, name, version, dep
             security_group = sg.id
 
     # ami_id
+    ami_id = None
     amis = conn_ec2.get_all_images(filters={'name': name + "-" + version})
     if len(amis) == 1:
         ami_id = amis[0].id
+    else:
+        print("[ERROR] ami " + name + "-" + version + " not found!")
+        exit(1)
 
     # role
     if "dependencies" in deploy[environment].keys() and len(deploy[environment]["dependencies"]) > 0:
