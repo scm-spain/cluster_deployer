@@ -30,7 +30,8 @@ class AsgardDeployer(object):
                 'min_instances': 1,
                 'max_instances': None,
                 'instance_type': 'm3.medium',
-                'region': 'eu-west-1'
+                'region': 'eu-west-1',
+                'user_data': 'NULL'
                 }
 
     def request(self, path, body = ''):
@@ -164,7 +165,7 @@ class AsgardDeployer(object):
                 "imageId": self.ami,
                 "keyName": self.key_name,
                 "securityGroups": [self.security_group],
-                "userData": "NULL",
+                "userData": self.user_data,
                 "instanceType": self.instance_type,
                 "kernelId": "",
                 "ramdiskId": "",
