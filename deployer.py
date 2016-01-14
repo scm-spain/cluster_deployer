@@ -26,6 +26,7 @@ class AsgardDeployer(object):
                 'asgard_url': '',
                 'elbs': [],
                 'elb': None,
+                'role': '',
                 'user_mail': '',
                 'min_instances': 1,
                 'max_instances': None,
@@ -35,8 +36,17 @@ class AsgardDeployer(object):
                 }
 
     def request(self, path, body = ''):
-        result = requests.post("http://{0}/{1}".format(self.asgard_base_url, path), body)
+        url = "http://{0}/{1}".format(self.asgard_base_url, path)
+        print(url)
+        result = requests.post(url, body)
         return result
+
+    def validate_response(self, r):
+        if r.status_code == 200 and "<div  class=\"errors\">" not in r.content:
+            return True
+        else:
+            printerr(r.content)
+            return False
 
     def application_exist(self):
         r = self.request("application/show/{}.json".format(self.app))
@@ -48,6 +58,7 @@ class AsgardDeployer(object):
 
     def create_application_if_not_present(self):
         if not self.application_exist():
+            print("doesn't exist")
             if not self.create_application():
                 printerr("application creation failed, quitting")
                 exit(1)
@@ -65,11 +76,7 @@ class AsgardDeployer(object):
 
         r = self.request("application/save", data)
 
-        if r.status_code == 200 and "<div  class=\"errors\">" not in r.content:
-            return True
-        else:
-            printerr(r.content)
-            return False
+        return self.validate_response(r)
 
     def create_autoscalinggroup(self):
 
@@ -107,7 +114,7 @@ class AsgardDeployer(object):
 
         r = self.request("autoScaling/save", data)
 
-        return r.status_code == 200
+        return self.validate_response(r)
 
     def get_next_version(self):
         url = "deployment/prepare/" + self.app + ".json?deploymentTemplateName=CreateAndCleanUpPreviousAsg&includeEnvironment=true"
@@ -222,7 +229,7 @@ class AsgardDeployer(object):
             'desired':      0,
         }
 
-        self.request("scheduledAction/save", data)
+        r = self.request("scheduledAction/save", data)
 
         if r.status_code != 200:
             return False
@@ -231,12 +238,12 @@ class AsgardDeployer(object):
         data = {
             'group': auto_scaling_group_name,
             'recurrence':   "30 5 * * 1-5",
-            'min':          min_instances,
-            'max':          max_instances,
-            'desired':      min_instances,
+            'min':          self.min_instances,
+            'max':          self.max_instances,
+            'desired':      self.min_instances,
             }
 
-        self.request("scheduledAction/save", data)
+        r = self.request("scheduledAction/save", data)
 
         if r.status_code != 200:
             return False
