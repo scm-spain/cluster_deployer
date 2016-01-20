@@ -1,6 +1,7 @@
 from __future__ import print_function
 import requests
 import json
+import sys
 
 def printerr(msg):
     print(msg, file=sys.stderr)
