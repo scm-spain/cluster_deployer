@@ -81,6 +81,11 @@ class AsgardDeployer(object):
 
     def create_autoscalinggroup(self):
 
+        user_data = "drama"
+        if self.user_data != "NULL":
+            user_data = self.user_data
+
+
         data = {
             'ticket': '',
             'requestedFromGui': 'true',
@@ -102,6 +107,7 @@ class AsgardDeployer(object):
             'subnetPurpose': 'external',
             'selectedZones': ['eu-west-1a', 'eu-west-1b', 'eu-west-1c'],
             'azRebalance': 'enabled',
+            "userData": user_data,
             'imageId': self.ami,
             'instanceType': self.instance_type,
             'keyName': self.key_name,
