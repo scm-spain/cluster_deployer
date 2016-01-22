@@ -1,10 +1,16 @@
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+
 import requests
 import json
 import sys
 
+
 def printerr(msg):
     print(msg, file=sys.stderr)
+
 
 class AsgardDeployer(object):
     def __init__(self, **kwargs):
@@ -18,9 +24,9 @@ class AsgardDeployer(object):
         if self.max_instances is None:
             self.max_instances = self.min_instances
 
-        self.app = self.app.replace("-","_")
-        if self.elb is None:
-            self.app = self.app.replace("_","")
+        self.app = self.app.replace("-", "_")
+        if self.elb:
+            self.app = self.app.replace("_", "")
 
     def defaults(self):
         return {
@@ -36,7 +42,7 @@ class AsgardDeployer(object):
                 'user_data': 'NULL'
                 }
 
-    def request(self, path, body = ''):
+    def request(self, path, body=''):
         url = "http://{0}/{1}".format(self.asgard_base_url, path)
         print(url)
         result = requests.post(url, body)
@@ -140,7 +146,7 @@ class AsgardDeployer(object):
                     },{
                         "type": "Resize",
                         "targetAsg": "Next",
-                        "capacity": 1,
+                        "capacity": self.min_instances,
                         "startUpTimeoutMinutes": 10
                     },{
                         "type": "DisableAsg",
@@ -187,6 +193,8 @@ class AsgardDeployer(object):
         }
 
         r = self.request("deployment/start", json.dumps(data))
+
+        print(r.content)
 
         return r.status_code == 200
 
@@ -253,13 +261,13 @@ class AsgardDeployer(object):
 
     def deploy(self, environment='pre'):
         self.create_application_if_not_present()
-        elbs = []
+        self.elbs = []
         if self.elb:
             if not self.loadbalancer_exist():
-                if not create_loadbalancer():
+                if not self.create_loadbalancer():
                     print("load balancer creation failed", file=sys.stderr)
                     exit(1)
-            elbs = [app]
+            self.elbs = [self.app]
 
         version = self.get_next_version()
 
@@ -270,5 +278,5 @@ class AsgardDeployer(object):
             print("Deploying {}".format(version))
             self.deploy_version(version=version)
 
-        if environment is not 'pro':
+        if environment != 'pro':
             self.set_scheduler(version)
