@@ -272,11 +272,10 @@ class AsgardDeployer(object):
         version = self.get_next_version()
 
         if version is None:
-            print("Creating autoscaling group for initial version")
-            self.create_autoscalinggroup()
-        else:
-            print("Deploying {}".format(version))
-            self.deploy_version(version=version)
+            version = self.app
+
+        print("Deploying {}".format(version))
+        self.deploy_version(version=version)
 
         if environment != 'pro':
             self.set_scheduler(version)
