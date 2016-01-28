@@ -85,8 +85,7 @@ class AsgardDeployer(object):
 
         return self.validate_response(r)
 
-    def create_autoscalinggroup(self):
-
+    def create_empty_autoscalinggroup(self):
         data = {
             'ticket': '',
             'requestedFromGui': 'true',
@@ -99,9 +98,9 @@ class AsgardDeployer(object):
             'devPhase': '',
             'partners': '',
             'revision': '',
-            'min': self.min_instances,
-            'max': self.max_instances,
-            'desiredCapacity': self.min_instances,
+            'min': 0,
+            'max': 0,
+            'desiredCapacity': 0,
             'healthCheckType': 'EC2',
             'healthCheckGracePeriod': '600',
             'terminationPolicy': 'Default',
@@ -135,7 +134,6 @@ class AsgardDeployer(object):
             return None
 
     def deploy_version(self, version):
-
         data = {
             "deploymentOptions": {
                 "clusterName": self.app,
@@ -143,15 +141,15 @@ class AsgardDeployer(object):
                 "steps": [
                     {
                         "type": "CreateAsg"
-                    },{
+                    }, {
                         "type": "Resize",
                         "targetAsg": "Next",
                         "capacity": self.min_instances,
                         "startUpTimeoutMinutes": 10
-                    },{
+                    }, {
                         "type": "DisableAsg",
                         "targetAsg": "Previous"
-                    },{
+                    }, {
                         "type": "DeleteAsg",
                         "targetAsg": "Previous"
                     }
@@ -199,7 +197,6 @@ class AsgardDeployer(object):
         return r.status_code == 200
 
     def create_loadbalancer(self):
-
         data = {
             'appName': self.app,
             'selectedZones': ['eu-west-1a', 'eu-west-1b', 'eu-west-1c'],
@@ -272,7 +269,8 @@ class AsgardDeployer(object):
         version = self.get_next_version()
 
         if version is None:
-            version = self.app
+            self.create_empty_autoscalinggroup()
+            version = self.get_next_version()
 
         print("Deploying {}".format(version))
         self.deploy_version(version=version)
