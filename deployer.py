@@ -227,7 +227,7 @@ class AsgardDeployer(object):
     def set_scheduler(self, version):
         auto_scaling_group_name = "{}".format(self.app)
         if version:
-            auto_scaling_group_name = auto_scaling_group_name + "-{}".format(version)
+            auto_scaling_group_name += "-{}".format(version)
 
         # Stop al 19:30 from monday to friday
         data = {
@@ -253,6 +253,35 @@ class AsgardDeployer(object):
             }
 
         r = self.request("scheduledAction/save", data)
+
+        if r.status_code != 200:
+            return False
+
+        return True
+
+    def scaling_policy(self, version):
+        # http://asgard.global-dev.spain.schibsted.io:8080/eu-west-1/scalingPolicy/create/testing-v002
+        auto_scaling_group_name = "{}".format(self.app)
+        if version:
+            auto_scaling_group_name += "-{}".format(version)
+
+        data = {
+            'adjustmentType':       "ExactCapacity",             #ChangeInCapacity, ExactCapacity, PercentChangeInCapacity
+            'existingMetric':       {"namespace":"AWS/EC2", "metricName":"CPUUtilization"},
+            'period':               60,
+            'cooldown':             300,
+            'threshold':            60,
+            'evaluationPeriods':    2,
+            'statistic':            "Maximum",
+            'adjustment':           1,
+            'minAdjustmentStep':    1,
+            'description':          "description",
+            'comparisonOperator':   "GreaterThanOrEqualToThreshold",
+            'group':                auto_scaling_group_name,
+            'region':               "eu-west-1"
+        }
+
+        r = self.request("scalingPolicy/save", data)
 
         if r.status_code != 200:
             return False
