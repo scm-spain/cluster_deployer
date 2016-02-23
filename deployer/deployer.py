@@ -28,7 +28,8 @@ class AsgardDeployer(object):
         if self.elb:
             self.app = self.app.replace("_", "")
 
-    def defaults(self):
+    @staticmethod
+    def defaults():
         return {
                 'asgard_url': '',
                 'elbs': [],
@@ -48,7 +49,8 @@ class AsgardDeployer(object):
         result = requests.post(url, body)
         return result
 
-    def validate_response(self, r):
+    @staticmethod
+    def validate_response(r):
         if r.status_code == 200 and "<div  class=\"errors\">" not in r.content:
             return True
         else:
@@ -123,7 +125,8 @@ class AsgardDeployer(object):
         return self.validate_response(r)
 
     def get_next_version(self):
-        url = "deployment/prepare/" + self.app + ".json?deploymentTemplateName=CreateAndCleanUpPreviousAsg&includeEnvironment=true"
+        url = "deployment/prepare/" + self.app + \
+              ".json?deploymentTemplateName=CreateAndCleanUpPreviousAsg&includeEnvironment=true"
 
         r = self.request(url)
 
@@ -224,7 +227,7 @@ class AsgardDeployer(object):
     def set_scheduler(self, version):
         auto_scaling_group_name = "{}".format(self.app)
         if version:
-            auto_scaling_group_name = auto_scaling_group_name + "-{}".format(version)
+            auto_scaling_group_name += "-{}".format(version)
 
         # Stop al 19:30 from monday to friday
         data = {
