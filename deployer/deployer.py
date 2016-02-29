@@ -179,7 +179,59 @@ class AsgardDeployer(object):
                 "launchConfigurationName": None,
                 "imageId": self.ami,
                 "keyName": self.key_name,
-                "securityGroups": [self.security_group],
+                "securityGroups": self.security_group,
+                "userData": self.user_data,
+                "instanceType": self.instance_type,
+                "kernelId": "",
+                "ramdiskId": "",
+                "blockDeviceMappings": None,
+                "instanceMonitoringIsEnabled": False,
+                "instancePriceType": "ON_DEMAND",
+                "iamInstanceProfile": self.role,
+                "ebsOptimized": False,
+                "associatePublicIpAddress": True
+            }
+        }
+
+        r = self.request("deployment/start", json.dumps(data))
+
+        print(r.content)
+
+        return r.status_code == 200
+
+    def deploy_version_without_eureka(self, version):
+        data = {
+            "deploymentOptions": {
+                "clusterName": self.app,
+                "notificationDestination": self.user_mail,
+                "steps": [
+                    {
+                        "type": "CreateAsg"
+                    }
+                ]
+            },
+            "asgOptions": {
+                "autoScalingGroupName": version,
+                "launchConfigurationName": None,
+                "minSize": self.min_instances,
+                "maxSize": self.max_instances,
+                "desiredCapacity": self.min_instances,
+                "defaultCooldown": 10,
+                "availabilityZones": ["eu-west-1c","eu-west-1a","eu-west-1b"],
+                "loadBalancerNames": self.elbs,
+                "healthCheckType": "EC2",
+                "healthCheckGracePeriod": 600,
+                "placementGroup": None,
+                "subnetPurpose": "external",
+                "terminationPolicies": ["Default"],
+                "tags": [],
+                "suspendedProcesses": []
+            },
+            "lcOptions": {
+                "launchConfigurationName": None,
+                "imageId": self.ami,
+                "keyName": self.key_name,
+                "securityGroups": self.security_group,
                 "userData": self.user_data,
                 "instanceType": self.instance_type,
                 "kernelId": "",
@@ -227,7 +279,7 @@ class AsgardDeployer(object):
     def set_scheduler(self, version):
         auto_scaling_group_name = "{}".format(self.app)
         if version:
-            auto_scaling_group_name += "-{}".format(version)
+            auto_scaling_group_name = version
 
         # Stop al 19:30 from monday to friday
         data = {
@@ -276,7 +328,7 @@ class AsgardDeployer(object):
             version = self.get_next_version()
 
         print("Deploying {}".format(version))
-        self.deploy_version(version=version)
+        self.deploy_version_without_eureka(version=version)
 
         if environment != 'pro':
             self.set_scheduler(version)
