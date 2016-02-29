@@ -136,7 +136,7 @@ class AsgardDeployer(object):
         else:
             return None
 
-    def deploy_version(self, version):
+    def deploy_version(self):
         data = {
             "deploymentOptions": {
                 "clusterName": self.app,
@@ -159,7 +159,7 @@ class AsgardDeployer(object):
                 ]
             },
             "asgOptions": {
-                "autoScalingGroupName": version,
+                "autoScalingGroupName": self.version,
                 "launchConfigurationName": None,
                 "minSize": self.min_instances,
                 "maxSize": self.max_instances,
@@ -224,6 +224,22 @@ class AsgardDeployer(object):
             printerr(r.content)
             return False
 
+    def set_scheduler(self, cron, min, max, desired):
+        data = {
+            'group':        self.version,
+            'recurrence':   cron,
+            'min':          min,
+            'max':          max,
+            'desired':      desired
+        }
+
+        r = self.request("scheduledAction/save", data)
+
+        if r.status_code != 200:
+            return False
+
+        return True
+
     def deploy(self):
         self.create_application_if_not_present()
         self.elbs = []
@@ -234,11 +250,11 @@ class AsgardDeployer(object):
                     exit(1)
             self.elbs = [self.app]
 
-        version = self.get_next_version()
+        self.version = self.get_next_version()
 
-        if version is None:
+        if self.version is None:
             self.create_empty_autoscalinggroup()
-            version = self.get_next_version()
+            self.version = self.get_next_version()
 
-        print("Deploying {}".format(version))
-        self.deploy_version(version=version)
+        print("Deploying {}".format(self.version))
+        self.deploy_version()
