@@ -224,42 +224,7 @@ class AsgardDeployer(object):
             printerr(r.content)
             return False
 
-    def set_scheduler(self, version):
-        auto_scaling_group_name = "{}".format(self.app)
-        if version:
-            auto_scaling_group_name += "-{}".format(version)
-
-        # Stop al 19:30 from monday to friday
-        data = {
-            'group':        auto_scaling_group_name,
-            'recurrence':   "30 17 * * 1-5",
-            'min':          0,
-            'max':          0,
-            'desired':      0,
-        }
-
-        r = self.request("scheduledAction/save", data)
-
-        if r.status_code != 200:
-            return False
-
-        # Start al 7:30 from monday to friday
-        data = {
-            'group': auto_scaling_group_name,
-            'recurrence':   "30 5 * * 1-5",
-            'min':          self.min_instances,
-            'max':          self.max_instances,
-            'desired':      self.min_instances,
-            }
-
-        r = self.request("scheduledAction/save", data)
-
-        if r.status_code != 200:
-            return False
-
-        return True
-
-    def deploy(self, environment='pre'):
+    def deploy(self):
         self.create_application_if_not_present()
         self.elbs = []
         if self.elb:
@@ -277,6 +242,3 @@ class AsgardDeployer(object):
 
         print("Deploying {}".format(version))
         self.deploy_version(version=version)
-
-        if environment != 'pro':
-            self.set_scheduler(version)
