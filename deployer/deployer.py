@@ -58,11 +58,11 @@ class AsgardDeployer(object):
             return False
 
     def application_exist(self):
-        r = self.request("application/show/{}.json".format(self.app))
+        r = self.request("application/show/{0}.json".format(self.app))
         return r.status_code == 200
 
     def loadbalancer_exist(self):
-        r = self.request("loadBalancer/show/{}.json".format(self.app))
+        r = self.request("loadBalancer/show/{0}.json".format(self.app))
         return r.status_code == 200
 
     def create_application_if_not_present(self):
@@ -232,6 +232,20 @@ class AsgardDeployer(object):
             'max':          max,
             'desired':      desired
         }
+
+        r = self.request("scheduledAction/save", data)
+
+        if r.status_code != 200:
+            return False
+
+        # Start al 7:30 from monday to friday
+        data = {
+            'group': auto_scaling_group_name,
+            'recurrence':   "30 5 * * 1-5",
+            'min':          self.min_instances,
+            'max':          self.max_instances,
+            'desired':      self.min_instances,
+            }
 
         r = self.request("scheduledAction/save", data)
 
