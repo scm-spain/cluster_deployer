@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name='deployer',
-    version='0.0.1',
+    version='0.0.2',
     description='Python module to deploy microservices.',
     author='Schibsted Spain',
     author_email='ferran.grau@scmspain.com',
