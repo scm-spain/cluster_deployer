@@ -64,11 +64,11 @@ class AsgardDeployer(object):
             return False
 
     def application_exist(self):
-        r = self.request("application/show/{}.json".format(self.app))
+        r = self.request("application/show/{0}.json".format(self.app))
         return r.status_code == 200
 
     def loadbalancer_exist(self):
-        r = self.request("loadBalancer/show/{}.json".format(self.app))
+        r = self.request("loadBalancer/show/{0}.json".format(self.app))
         return r.status_code == 200
 
     def create_application_if_not_present(self):
@@ -430,7 +430,7 @@ class AsgardDeployer(object):
             return False
 
     def set_scheduler(self, version):
-        auto_scaling_group_name = "{}".format(self.app)
+        auto_scaling_group_name = "{0}".format(self.app)
         if version:
             auto_scaling_group_name = version
 
