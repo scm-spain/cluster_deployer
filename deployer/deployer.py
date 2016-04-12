@@ -57,10 +57,10 @@ class AsgardDeployer(object):
 
     @staticmethod
     def validate_response(r):
-        if r.status_code == 200 and "errors" not in r.content:
+        if r.status_code == 200 and "errors" not in r.text:
             return True
         else:
-            printerr(r.content)
+            printerr(r.text)
             return False
 
     def application_exist(self):
@@ -137,7 +137,7 @@ class AsgardDeployer(object):
         r = self.request(url)
 
         if r.status_code == 200:
-            data = json.loads(r.content)
+            data = json.loads(str(r.text))
             return data["environment"]["nextGroupName"]
         else:
             return None
@@ -201,7 +201,7 @@ class AsgardDeployer(object):
 
         r = self.request("deployment/start", json.dumps(data))
 
-        print(r.content)
+        print(r.text)
 
         return r.status_code == 200
 
@@ -426,7 +426,7 @@ class AsgardDeployer(object):
             return True
         else:
             printerr("Load balancer creation failed")
-            printerr(r.content)
+            printerr(r.text)
             return False
 
     def set_scheduler(self, version):
