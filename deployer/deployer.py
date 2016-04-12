@@ -57,7 +57,7 @@ class AsgardDeployer(object):
 
     @staticmethod
     def validate_response(r):
-        if r.status_code == 200 and "<div  class=\"errors\">" not in r.content:
+        if r.status_code == 200 and "errors" not in r.content:
             return True
         else:
             printerr(r.content)
