@@ -260,7 +260,7 @@ class AsgardDeployer(object):
             }
         }
 
-        r = self.request("deployment/start", json.dumps(data))
+        request = self.request("deployment/start", json.dumps(data))
 
         time.sleep(30)
 
@@ -272,14 +272,17 @@ class AsgardDeployer(object):
 
         if good_deploy:
             if remove_old:
-                for asg_name in self.get_asg_names_in_cluster():
-                    if asg_name != version:
-                        print("Deleting ASG {0}".format(asg_name))
-                        self.delete_asg(asg_name)
+                self.remove_old_asg(new_asg_name=version)
         else:
             self.disable_asg(asg_name=version)
 
-        return r.status_code == 200
+        return request.status_code == 200
+
+    def remove_old_asg(self, new_asg_name):
+        for asg_name in self.get_asg_names_in_cluster():
+            if asg_name != new_asg_name:
+                print("Deleting ASG {0}".format(asg_name))
+                self.delete_asg(asg_name)
 
     def resize_asg(self, asg_name):
         data = {"name": asg_name,
