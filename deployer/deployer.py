@@ -6,6 +6,11 @@ from __future__ import unicode_literals
 import requests
 import json
 import sys
+import time
+import os
+import datetime
+
+from requests import ConnectionError
 
 
 def printerr(msg):
@@ -40,7 +45,8 @@ class AsgardDeployer(object):
                 'max_instances': None,
                 'instance_type': 'm3.medium',
                 'region': 'eu-west-1',
-                'user_data': 'NULL'
+                'user_data': 'NULL',
+                'start_up_timeout_minutes': 10
                 }
 
     def request(self, path, body=''):
@@ -51,10 +57,10 @@ class AsgardDeployer(object):
 
     @staticmethod
     def validate_response(r):
-        if r.status_code == 200 and "<div  class=\"errors\">" not in r.content:
+        if r.status_code == 200 and "errors" not in r.text:
             return True
         else:
-            printerr(r.content)
+            printerr(r.text)
             return False
 
     def application_exist(self):
@@ -131,7 +137,7 @@ class AsgardDeployer(object):
         r = self.request(url)
 
         if r.status_code == 200:
-            data = json.loads(r.content)
+            data = json.loads(str(r.text))
             return data["environment"]["nextGroupName"]
         else:
             return None
@@ -148,7 +154,7 @@ class AsgardDeployer(object):
                         "type": "Resize",
                         "targetAsg": "Next",
                         "capacity": self.min_instances,
-                        "startUpTimeoutMinutes": 10
+                        "startUpTimeoutMinutes": self.start_up_timeout_minutes,
                     }, {
                         "type": "DisableAsg",
                         "targetAsg": "Previous"
@@ -179,7 +185,7 @@ class AsgardDeployer(object):
                 "launchConfigurationName": None,
                 "imageId": self.ami,
                 "keyName": self.key_name,
-                "securityGroups": [self.security_group],
+                "securityGroups": self.security_group,
                 "userData": self.user_data,
                 "instanceType": self.instance_type,
                 "kernelId": "",
@@ -195,8 +201,210 @@ class AsgardDeployer(object):
 
         r = self.request("deployment/start", json.dumps(data))
 
-        print(r.content)
+        print(r.text)
 
+        return r.status_code == 200
+
+    def deploy_version_without_eureka(self, version, health_check, health_check_port, remove_old):
+        print("--> PARAMS: "
+              "version={version}, "
+              "health_check={health_check}, "
+              "health_check_port={health_check_port}, "
+              "remove_old={remove_old}".format(version=version,
+                                               health_check=health_check,
+                                               health_check_port=health_check_port,
+                                               remove_old=remove_old))
+
+        data = {
+            "deploymentOptions": {
+                "clusterName": self.app,
+                "notificationDestination": self.user_mail,
+                "steps": [
+                    {
+                        "type":                     "CreateAsg"
+                    }
+                ]
+            },
+            "asgOptions": {
+                "autoScalingGroupName": version,
+                "launchConfigurationName": None,
+                "minSize": self.min_instances,
+                "maxSize": self.max_instances,
+                "desiredCapacity": self.min_instances,
+                "defaultCooldown": 10,
+                "availabilityZones": ["eu-west-1c", "eu-west-1a", "eu-west-1b"],
+                "loadBalancerNames": self.elbs,
+                "healthCheckType": "EC2",
+                "healthCheckGracePeriod": 600,
+                "placementGroup": None,
+                "subnetPurpose": "external",
+                "terminationPolicies": ["Default"],
+                "tags": [],
+                "suspendedProcesses": []
+            },
+            "lcOptions": {
+                "launchConfigurationName": None,
+                "imageId": self.ami,
+                "keyName": self.key_name,
+                "securityGroups": self.security_group,
+                "userData": self.user_data,
+                "instanceType": self.instance_type,
+                "kernelId": "",
+                "ramdiskId": "",
+                "blockDeviceMappings": None,
+                "instanceMonitoringIsEnabled": False,
+                "instancePriceType": "ON_DEMAND",
+                "iamInstanceProfile": self.role,
+                "ebsOptimized": False,
+                "associatePublicIpAddress": True
+            }
+        }
+
+        request = self.request("deployment/start", json.dumps(data))
+
+        time.sleep(30)
+
+        self.resize_asg(asg_name=version)
+
+        good_deploy = self.wait_asg_ready(version=version,
+                                          health_check=health_check,
+                                          health_check_port=health_check_port)
+
+        if good_deploy:
+            if remove_old:
+                self.remove_old_asg(new_asg_name=version)
+        else:
+            self.disable_asg(asg_name=version)
+
+        return request.status_code == 200
+
+    def remove_old_asg(self, new_asg_name):
+        for asg_name in self.get_asg_names_in_cluster():
+            if asg_name != new_asg_name:
+                print("Deleting ASG {0}".format(asg_name))
+                self.delete_asg(asg_name)
+
+    def resize_asg(self, asg_name):
+        data = {"name": asg_name,
+                "minAndMaxSize": self.min_instances,
+                "type": "Resize",
+                }
+
+        r = self.request("cluster/resize", data)
+
+        return r.status_code == 200
+
+    def wait_asg_ready(self, version, health_check, health_check_port):
+        start = datetime.datetime.now()
+        wait_seconds = 60 * int(self.start_up_timeout_minutes)
+
+        # wait until a instance are ready
+        print("--> wait until a instance are ready")
+        instances = self.get_instances_in_asg(version)
+        count = 0
+        not_started = True
+        while not_started:
+            instances = self.get_instances_in_asg(version)
+            count += 1
+            if count > 20:
+                not_started = False
+            else:
+                if len(instances) > 0:
+                    not_started = False
+
+            if (datetime.datetime.now()-start).total_seconds() > wait_seconds and not_started:
+                return False
+            time.sleep(30)
+
+        hostname = None
+        for instance in instances:
+            if hostname is None:
+                hostname = instance["ec2Instance"]["publicIpAddress"]
+
+        # wait instance answer ping
+        print("--> wait instance answer ping")
+        not_started = True
+        while not_started:
+            response = os.system("ping -c 1 " + hostname)
+            if response == 0:
+                not_started = False
+
+            if (datetime.datetime.now()-start).total_seconds() > wait_seconds and not_started:
+                return False
+            time.sleep(30)
+
+        if health_check is None:
+            # wait the rest time
+            print("--> wait the rest time")
+            not_started = True
+            while not_started:
+                if (datetime.datetime.now()-start).total_seconds() > wait_seconds:
+                    not_started = False
+                print((datetime.datetime.now()-start).total_seconds())
+                time.sleep(10)
+            return True
+        else:
+            # wait until the health check response
+            not_started = True
+            while not_started:
+                if health_check_port is not None:
+                    url = "http://{0}:{1}{2}".format(hostname, health_check_port, health_check)
+                else:
+                    url = "http://{0}{1}".format(hostname, health_check)
+
+                try:
+                    r = requests.get(url)
+                    print("--> {0}".format(r.status_code))
+                    if r.status_code == 200:
+                        not_started = False
+
+                except ConnectionError:
+                    print("--> health check don't answer yet.")
+                except Exception as e:
+                    print("[ERROR] request to health check error {0}: {1}".format(e.errno, e.strerror))
+                    return False
+
+                if (datetime.datetime.now()-start).total_seconds() > wait_seconds and not_started:
+                    return False
+
+                print((datetime.datetime.now()-start).total_seconds())
+                time.sleep(30)
+            return True
+
+    def get_asg_names_in_cluster(self):
+        # function get from: https://github.schibsted.io/spt-infrastructure/asgard_manager
+
+        """ Return a list of AutoScaling Groups for the app cluster
+        :return: List. Autoscaling Groups in cluster
+        """
+        resp = self.request("cluster/list.json", None)
+        for cluster in json.loads(resp.text):
+            if cluster["cluster"] == self.app:
+                return cluster["autoScalingGroups"]
+
+        return [] # there are no ASGs, so return an empty list
+
+    def get_instances_in_asg(self, asg_name):
+        result = list()
+        resp = self.request("instance/list.json", None)
+        for cluster in json.loads(resp.text):
+            if cluster["autoScalingGroupName"] == asg_name:
+                result.append(cluster)
+        return result
+
+    def disable_asg(self, asg_name):
+        data = {"name": asg_name}
+        r = self.request("cluster/deactivate", data)
+        return r.status_code == 200
+
+    def enable_asg(self, asg_name):
+        data = {"name": asg_name}
+        r = self.request("cluster/activate", data)
+        return r.status_code == 200
+
+    def delete_asg(self, asg_name):
+        data = {"name": asg_name}
+        r = self.request("cluster/delete", data)
         return r.status_code == 200
 
     def create_loadbalancer(self):
@@ -221,13 +429,13 @@ class AsgardDeployer(object):
             return True
         else:
             printerr("Load balancer creation failed")
-            printerr(r.content)
+            printerr(r.text)
             return False
 
     def set_scheduler(self, version):
         auto_scaling_group_name = "{0}".format(self.app)
         if version:
-            auto_scaling_group_name += "-{0}".format(version)
+            auto_scaling_group_name = version
 
         # Stop al 19:30 from monday to friday
         data = {
@@ -259,7 +467,7 @@ class AsgardDeployer(object):
 
         return True
 
-    def deploy(self, environment='pre'):
+    def deploy(self, environment='pre', eureka=True, health_check=None, health_check_port=None, remove_old=True):
         self.create_application_if_not_present()
         self.elbs = []
         if self.elb:
@@ -275,8 +483,14 @@ class AsgardDeployer(object):
             self.create_empty_autoscalinggroup()
             version = self.get_next_version()
 
-        print("Deploying {0}".format(version))
-        self.deploy_version(version=version)
+        print("Deploying {}".format(version))
+        if eureka:
+            self.deploy_version(version=version)
+        else:
+            self.deploy_version_without_eureka(version=version,
+                                               health_check=health_check,
+                                               health_check_port=health_check_port,
+                                               remove_old=remove_old)
 
         if environment != 'pro':
             self.set_scheduler(version)
