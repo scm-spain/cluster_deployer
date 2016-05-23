@@ -46,7 +46,8 @@ class AsgardDeployer(object):
                 'instance_type': 'm3.medium',
                 'region': 'eu-west-1',
                 'user_data': 'NULL',
-                'start_up_timeout_minutes': 10
+                'start_up_timeout_minutes': 10,
+                'instance_price_type': "ON_DEMAND"
                 }
 
     def request(self, path, body=''):
@@ -192,7 +193,7 @@ class AsgardDeployer(object):
                 "ramdiskId": "",
                 "blockDeviceMappings": None,
                 "instanceMonitoringIsEnabled": False,
-                "instancePriceType": "ON_DEMAND",
+                "instancePriceType": self.instance_price_type,
                 "iamInstanceProfile": self.role,
                 "ebsOptimized": False,
                 "associatePublicIpAddress": True
@@ -253,7 +254,7 @@ class AsgardDeployer(object):
                 "ramdiskId": "",
                 "blockDeviceMappings": None,
                 "instanceMonitoringIsEnabled": False,
-                "instancePriceType": "ON_DEMAND",
+                "instancePriceType": self.instance_price_type,
                 "iamInstanceProfile": self.role,
                 "ebsOptimized": False,
                 "associatePublicIpAddress": True
