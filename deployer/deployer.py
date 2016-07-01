@@ -22,7 +22,8 @@ class AsgardDeployer(object):
         # Set properties with default values, then override them with provided
         # keyword arguments
         self.__dict__.update(self.defaults())
-        self.__dict__.update(kwargs)
+        # Only update if its value is not None
+        self.__dict__.update((k, v) for k, v in kwargs.iteritems() if v is not None)
 
         self.asgard_base_url = "{0}/{1}".format(self.asgard_url, self.region)
 
@@ -47,8 +48,15 @@ class AsgardDeployer(object):
                 'region': 'eu-west-1',
                 'user_data': 'NULL',
                 'start_up_timeout_minutes': 10,
-                'instance_price_type': "ON_DEMAND"
-                }
+                'instance_price_type': "ON_DEMAND",
+                'elb_mapping_ports': [
+                    {
+                        'protocol': 'HTTP',
+                        'elb_port': 80,
+                        'instance_port': 8000
+                    }
+                ]
+        }
 
     def request(self, path, body=''):
         url = "http://{0}/{1}".format(self.asgard_base_url, path)
@@ -408,21 +416,24 @@ class AsgardDeployer(object):
         r = self.request("cluster/delete", data)
         return r.status_code == 200
 
-    def create_loadbalancer(self):
+    def create_loadbalancer(self, health_check='healthcheck', health_check_port=8000):
         data = {
             'appName': self.app,
             'selectedZones': ['eu-west-1a', 'eu-west-1b', 'eu-west-1c'],
             'selectedSecurityGroups': self.security_group,
-            'protocol1': 'HTTP',
-            'lbPort1': '80',
-            'instancePort1': '8000',
             'subnetPurpose': 'external',
-            'target': 'HTTP:8000/healthcheck',
+            'target': "HTTP:{0}/{1}".format(health_check_port, health_check),
             'interval': '10',
             'timeout': '5',
             'unhealthy': '2',
             'healthy': '10'
         }
+        i = 1
+        for mapping in self.elb_mapping_ports:
+            data['protocol' + str(i)] = mapping['protocol']
+            data['lbPort' + str(i)] = mapping['elb_port']
+            data['instancePort' + str(i)] = mapping['instance_port']
+            i += 1
 
         r = self.request("loadBalancer/save", data)
 
@@ -473,7 +484,7 @@ class AsgardDeployer(object):
         self.elbs = []
         if self.elb:
             if not self.loadbalancer_exist():
-                if not self.create_loadbalancer():
+                if not self.create_loadbalancer(health_check, health_check_port):
                     print("load balancer creation failed", file=sys.stderr)
                     exit(1)
             self.elbs = [self.app]
