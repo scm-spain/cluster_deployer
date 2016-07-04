@@ -3,6 +3,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import re
+
 import requests
 import json
 import sys
@@ -37,25 +39,27 @@ class AsgardDeployer(object):
     @staticmethod
     def defaults():
         return {
-                'asgard_url': '',
-                'elbs': [],
-                'elb': None,
-                'role': '',
-                'user_mail': '',
-                'min_instances': 1,
-                'max_instances': None,
-                'instance_type': 'm3.medium',
-                'region': 'eu-west-1',
-                'user_data': 'NULL',
-                'start_up_timeout_minutes': 10,
-                'instance_price_type': "ON_DEMAND",
-                'elb_mapping_ports': [
-                    {
-                        'protocol': 'HTTP',
-                        'elb_port': 80,
-                        'instance_port': 8000
-                    }
-                ]
+            'asgard_url': '',
+            'elbs': [],
+            'elb': None,
+            'elb_dns': None,
+            'hosted_zone_domain': '',
+            'role': '',
+            'user_mail': '',
+            'min_instances': 1,
+            'max_instances': None,
+            'instance_type': 'm3.medium',
+            'region': 'eu-west-1',
+            'user_data': 'NULL',
+            'start_up_timeout_minutes': 10,
+            'instance_price_type': "ON_DEMAND",
+            'elb_mapping_ports': [
+                {
+                    'protocol': 'HTTP',
+                    'elb_port': 80,
+                    'instance_port': 8000
+                }
+            ]
         }
 
     def request(self, path, body=''):
@@ -79,6 +83,14 @@ class AsgardDeployer(object):
     def loadbalancer_exist(self):
         r = self.request("loadBalancer/show/{0}.json".format(self.app))
         return r.status_code == 200
+
+    def get_loadbalancer_data(self):
+        r = self.request("loadBalancer/show/{0}.json".format(self.app))
+
+        if r.status_code != 200:
+            return None
+        else:
+            return r.json()
 
     def create_application_if_not_present(self):
         if not self.application_exist():
@@ -180,7 +192,7 @@ class AsgardDeployer(object):
                 "maxSize": self.max_instances,
                 "desiredCapacity": self.min_instances,
                 "defaultCooldown": 10,
-                "availabilityZones": ["eu-west-1c","eu-west-1a","eu-west-1b"],
+                "availabilityZones": ["eu-west-1c", "eu-west-1a", "eu-west-1b"],
                 "loadBalancerNames": self.elbs,
                 "healthCheckType": "EC2",
                 "healthCheckGracePeriod": 600,
@@ -230,7 +242,7 @@ class AsgardDeployer(object):
                 "notificationDestination": self.user_mail,
                 "steps": [
                     {
-                        "type":                     "CreateAsg"
+                        "type": "CreateAsg"
                     }
                 ]
             },
@@ -321,7 +333,7 @@ class AsgardDeployer(object):
                 if len(instances) > 0:
                     not_started = False
 
-            if (datetime.datetime.now()-start).total_seconds() > wait_seconds and not_started:
+            if (datetime.datetime.now() - start).total_seconds() > wait_seconds and not_started:
                 return False
             time.sleep(30)
 
@@ -338,7 +350,7 @@ class AsgardDeployer(object):
             if response == 0:
                 not_started = False
 
-            if (datetime.datetime.now()-start).total_seconds() > wait_seconds and not_started:
+            if (datetime.datetime.now() - start).total_seconds() > wait_seconds and not_started:
                 return False
             time.sleep(30)
 
@@ -347,9 +359,9 @@ class AsgardDeployer(object):
             print("--> wait the rest time")
             not_started = True
             while not_started:
-                if (datetime.datetime.now()-start).total_seconds() > wait_seconds:
+                if (datetime.datetime.now() - start).total_seconds() > wait_seconds:
                     not_started = False
-                print((datetime.datetime.now()-start).total_seconds())
+                print((datetime.datetime.now() - start).total_seconds())
                 time.sleep(10)
             return True
         else:
@@ -373,10 +385,10 @@ class AsgardDeployer(object):
                     print("[ERROR] request to health check error {0}: {1}".format(e.errno, e.strerror))
                     return False
 
-                if (datetime.datetime.now()-start).total_seconds() > wait_seconds and not_started:
+                if (datetime.datetime.now() - start).total_seconds() > wait_seconds and not_started:
                     return False
 
-                print((datetime.datetime.now()-start).total_seconds())
+                print((datetime.datetime.now() - start).total_seconds())
                 time.sleep(30)
             return True
 
@@ -391,7 +403,7 @@ class AsgardDeployer(object):
             if cluster["cluster"] == self.app:
                 return cluster["autoScalingGroups"]
 
-        return [] # there are no ASGs, so return an empty list
+        return []  # there are no ASGs, so return an empty list
 
     def get_instances_in_asg(self, asg_name):
         result = list()
@@ -416,11 +428,14 @@ class AsgardDeployer(object):
         r = self.request("cluster/delete", data)
         return r.status_code == 200
 
-    def create_loadbalancer(self, health_check='healthcheck', health_check_port=8000):
+    def create_loadbalancer(self, health_check, health_check_port):
         data = {
             'appName': self.app,
             'selectedZones': ['eu-west-1a', 'eu-west-1b', 'eu-west-1c'],
             'selectedSecurityGroups': self.security_group,
+            'protocol1': 'HTTP',
+            'lbPort1': '80',
+            'instancePort1': '8000',
             'subnetPurpose': 'external',
             'target': "HTTP:{0}/{1}".format(health_check_port, health_check),
             'interval': '10',
@@ -451,11 +466,11 @@ class AsgardDeployer(object):
 
         # Stop al 19:30 from monday to friday
         data = {
-            'group':        auto_scaling_group_name,
-            'recurrence':   "30 17 * * 1-5",
-            'min':          0,
-            'max':          0,
-            'desired':      0,
+            'group': auto_scaling_group_name,
+            'recurrence': "30 17 * * 1-5",
+            'min': 0,
+            'max': 0,
+            'desired': 0,
         }
 
         r = self.request("scheduledAction/save", data)
@@ -466,11 +481,11 @@ class AsgardDeployer(object):
         # Start al 7:30 from monday to friday
         data = {
             'group': auto_scaling_group_name,
-            'recurrence':   "30 5 * * 1-5",
-            'min':          self.min_instances,
-            'max':          self.max_instances,
-            'desired':      self.min_instances,
-            }
+            'recurrence': "30 5 * * 1-5",
+            'min': self.min_instances,
+            'max': self.max_instances,
+            'desired': self.min_instances,
+        }
 
         r = self.request("scheduledAction/save", data)
 
@@ -482,12 +497,9 @@ class AsgardDeployer(object):
     def deploy(self, environment='pre', eureka=True, health_check=None, health_check_port=None, remove_old=True):
         self.create_application_if_not_present()
         self.elbs = []
+
         if self.elb:
-            if not self.loadbalancer_exist():
-                if not self.create_loadbalancer(health_check, health_check_port):
-                    print("load balancer creation failed", file=sys.stderr)
-                    exit(1)
-            self.elbs = [self.app]
+            self.deploy_elb(health_check, health_check_port)
 
         version = self.get_next_version()
 
@@ -506,3 +518,111 @@ class AsgardDeployer(object):
 
         if environment != 'pro':
             self.set_scheduler(version)
+
+    def deploy_elb(self, health_check='healthcheck', health_check_port=8000):
+        self.elbs = [self.app]
+
+        elb_data = self.get_or_create_loadbalancer_data(health_check, health_check_port)
+
+        self.validate_loadbalancer(elb_data, health_check, health_check_port)
+
+        if self.elb_dns:
+            domain_name = elb_data["loadBalancer"]["DNSName"]
+            self.check_or_create_route53(domain_name)
+
+    def get_or_create_loadbalancer_data(self, health_check, health_check_port):
+        elb_data = self.get_loadbalancer_data()
+
+        if elb_data is None:
+            if not self.create_loadbalancer(health_check, health_check_port):
+                print("load balancer creation failed", file=sys.stderr)
+                exit(1)
+            elb_data = self.get_loadbalancer_data()
+
+        return elb_data
+
+    @staticmethod
+    def validate_loadbalancer(elb_data, health_check, health_check_port):
+        elb_healthcheck_target = elb_data.get("loadBalancer", {}).get("healthCheck", {}).get("target")
+
+        if elb_healthcheck_target is None:
+            raise Exception("Health check configuration not found on ELB {0}".format(elb_data["name"]))
+
+        search_data = re.search(r"^HTTP:{0}/*{1}$".format(health_check_port, health_check), elb_healthcheck_target)
+        if search_data is None:
+            wanted_healthcheck = "HTTP:{0}/{1}".format(health_check_port, health_check)
+
+            raise Exception("Deployed ELB healthcheck changed, Updates should be done manually:\n" +
+                            "Found: {0} | Requested {1}".format(elb_healthcheck_target, wanted_healthcheck))
+
+    def check_or_create_route53(self, domain_name):
+        hosted_zone = self.get_hosted_zone()
+
+        hosted_zone_id = hosted_zone["id"]
+        hosted_zone_name = hosted_zone["name"]
+
+        target_route_name = "{0}.{1}".format(self.app, hosted_zone_name)
+
+        route53 = self.get_route53(hosted_zone["id"], target_route_name)
+
+        if route53 is None:
+            self.create_route53_cname(hosted_zone_id, target_route_name, domain_name)
+
+        print("Service is exposed on " + target_route_name)
+
+    def get_hosted_zone(self):
+        r = self.request("hostedZone/list.json")
+
+        if r.status_code is not 200:
+            raise Exception("There isn't hosted zones on AWS")
+
+        json_response = r.json()
+        hosted_zones = [route for route in json_response if route.get("name", "") == self.hosted_zone_domain]
+
+        if len(hosted_zones) is not 1:
+            hosted_zone = map(lambda route: route["name"], hosted_zones)
+
+            raise Exception("Cannot guess the hostedZone, candidates are: {0}".format(hosted_zone))
+
+        return hosted_zones[0]
+
+    def get_route53(self, hosted_zone_id, wanted_route53_name):
+        r = self.request("hostedZone/show/{0}.json".format(hosted_zone_id))
+
+        if r.status_code is not 200:
+            raise Exception("Cannot retrieve the list of routes in hosted zone {0}".format(hosted_zone_id))
+
+        json_response = r.json()
+
+        routes = [route for route in json_response.get("resourceRecordSets", []) if route["name"] == wanted_route53_name]
+
+        routes_len = len(routes)
+
+        if routes_len == 0:
+            return None
+        elif routes_len == 1:
+            return routes[0]
+        else:
+            # Probably this is impossible, or very unlikely (race condition)
+            routes_names = map(lambda route: route["name"], routes)
+            raise Exception(
+                "Found more routes than expected for {0}, candidates {1}".format(wanted_route53_name, routes_names))
+
+    def create_route53_cname(self, hosted_zone_id, route53_name, domain_name):
+        # should follow redirects
+        path = "hostedZone/addResourceRecordSet"
+
+        data = {
+            "type": "CNAME",
+            "resourceRecordSetName": route53_name,
+            "resourceRecords": domain_name,
+            "ttl": "60",
+            "hostedZoneId": hosted_zone_id
+        }
+
+        r = self.request(path, data)
+
+        if r.status_code != 200 or "DNS CREATE change submitted" not in r.text:
+            raise Exception(
+                "Cannot create Route53 {0} on hosted_zone {1} - {2}: {3}".format(route53_name, hosted_zone_id,
+                                                                                 r.status_code, r.text))
