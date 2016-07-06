@@ -494,7 +494,7 @@ class AsgardDeployer(object):
 
         return True
 
-    def deploy(self, environment='pre', eureka=True, health_check=None, health_check_port=None, remove_old=True):
+    def deploy(self, environment='pre', eureka=True, health_check='healthcheck', health_check_port=8000, remove_old=True):
         self.create_application_if_not_present()
         self.elbs = []
 
@@ -519,7 +519,7 @@ class AsgardDeployer(object):
         if environment != 'pro':
             self.set_scheduler(version)
 
-    def deploy_elb(self, health_check='healthcheck', health_check_port=8000):
+    def deploy_elb(self, health_check, health_check_port):
         self.elbs = [self.app]
 
         elb_data = self.get_or_create_loadbalancer_data(health_check, health_check_port)
