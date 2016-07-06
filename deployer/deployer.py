@@ -494,7 +494,13 @@ class AsgardDeployer(object):
 
         return True
 
-    def deploy(self, environment='pre', eureka=True, health_check='healthcheck', health_check_port=8000, remove_old=True):
+    def deploy(self, environment='pre', eureka=True, health_check=None, health_check_port=None, remove_old=True):
+        if health_check is None:
+            health_check = 'healthcheck'
+
+        if health_check_port is None:
+            health_check_port = 8000
+
         self.create_application_if_not_present()
         self.elbs = []
 
