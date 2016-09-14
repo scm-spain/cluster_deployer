@@ -53,6 +53,7 @@ class AsgardDeployer(object):
             'user_data': 'NULL',
             'start_up_timeout_minutes': 10,
             'instance_price_type': "ON_DEMAND",
+            'subnet_purpose_tag': "external",
             'elb_mapping_ports': [
                 {
                     'protocol': 'HTTP',
@@ -133,7 +134,7 @@ class AsgardDeployer(object):
             'healthCheckType': 'EC2',
             'healthCheckGracePeriod': '600',
             'terminationPolicy': 'Default',
-            'subnetPurpose': 'external',
+            'subnetPurpose': self.subnet_purpose_tag,
             'selectedZones': ['eu-west-1a', 'eu-west-1b', 'eu-west-1c'],
             'azRebalance': 'enabled',
             'imageId': self.ami,
@@ -197,7 +198,7 @@ class AsgardDeployer(object):
                 "healthCheckType": "EC2",
                 "healthCheckGracePeriod": 600,
                 "placementGroup": None,
-                "subnetPurpose": "external",
+                "subnetPurpose": self.subnet_purpose_tag,
                 "terminationPolicies": ["Default"],
                 "tags": [],
                 "suspendedProcesses": []
@@ -258,7 +259,7 @@ class AsgardDeployer(object):
                 "healthCheckType": "EC2",
                 "healthCheckGracePeriod": 600,
                 "placementGroup": None,
-                "subnetPurpose": "external",
+                "subnetPurpose": self.subnet_purpose_tag,
                 "terminationPolicies": ["Default"],
                 "tags": [],
                 "suspendedProcesses": []
@@ -436,7 +437,7 @@ class AsgardDeployer(object):
             'protocol1': 'HTTP',
             'lbPort1': '80',
             'instancePort1': '8000',
-            'subnetPurpose': 'external',
+            'subnetPurpose': self.subnet_purpose_tag,
             'target': "HTTP:{0}/{1}".format(health_check_port, health_check),
             'interval': '10',
             'timeout': '5',
