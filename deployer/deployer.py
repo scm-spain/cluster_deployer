@@ -79,6 +79,12 @@ class AsgardDeployer(object):
 
     def application_exist(self):
         r = self.request("application/show/{0}.json".format(self.app))
+
+        #
+        print("Status code: {}".format(r.status_code))
+        print("Text: {}".format(r.text))
+        #
+
         return r.status_code == 200
 
     def loadbalancer_exist(self):
