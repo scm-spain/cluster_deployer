@@ -540,7 +540,7 @@ class AsgardDeployer(object):
             self.set_scheduler(version)
 
     def deploy_elb(self, health_check, health_check_port):
-        self.elbs = [self.app]
+        self.elbs = [self.get_cluster_name()]
 
         elb_data = self.get_or_create_loadbalancer_data(health_check, health_check_port)
 
