@@ -40,7 +40,7 @@ Basically the constructor of AsgardDeployer receives a dictionary with the follo
 | start_up_timeout_minutes | String  | Maximum time to wait for instances to start up   | 10          |
 | instance_price_type      | String  | Type of instance price                           | 'ON_DEMAND' |
 | elb_mapping_ports        | Array   | Array of mapping ports                           |             |
-| stack_label              | String  | Stack label of the installation to be added as a prefix on the cluster name |             |
+| stack_label              | String  | Stack label of the installation to be added as a prefix on the cluster name |  None       |
 
 ### ELB Mapping ports
 
