@@ -60,7 +60,8 @@ class AsgardDeployer(object):
                     'elb_port': 80,
                     'instance_port': 8000
                 }
-            ]
+            ],
+            'stack_label': None
         }
 
     def request(self, path, body=''):
@@ -82,11 +83,11 @@ class AsgardDeployer(object):
         return r.status_code == 200
 
     def loadbalancer_exist(self):
-        r = self.request("loadBalancer/show/{0}.json".format(self.app))
+        r = self.request("loadBalancer/show/{0}.json".format(self.get_cluster_name()))
         return r.status_code == 200
 
     def get_loadbalancer_data(self):
-        r = self.request("loadBalancer/show/{0}.json".format(self.app))
+        r = self.request("loadBalancer/show/{0}.json".format(self.get_cluster_name()))
 
         if r.status_code != 200:
             return None
@@ -121,7 +122,7 @@ class AsgardDeployer(object):
             'requestedFromGui': 'true',
             'appWithClusterOptLevel': 'false',
             'appName': self.app,
-            'stack': '',
+            'stack': self.get_stack(),
             'newStack': '',
             'detail': '',
             'countries': '',
@@ -153,7 +154,7 @@ class AsgardDeployer(object):
         return self.validate_response(r)
 
     def get_next_version(self):
-        url = "deployment/prepare/" + self.app + \
+        url = "deployment/prepare/" + self.get_cluster_name() + \
               ".json?deploymentTemplateName=CreateAndCleanUpPreviousAsg&includeEnvironment=true"
 
         r = self.request(url)
@@ -164,10 +165,22 @@ class AsgardDeployer(object):
         else:
             return None
 
+    def get_stack(self):
+        stack = ''
+        if self.stack_label is not None:
+            stack = self.stack_label
+        return stack
+
+    def get_cluster_name(self):
+        cluster_name = self.app
+        if self.stack_label is not None:
+            cluster_name = "{}-{}".format(self.app, self.stack_label)
+        return cluster_name
+
     def deploy_version(self, version):
         data = {
             "deploymentOptions": {
-                "clusterName": self.app,
+                "clusterName": self.get_cluster_name(),
                 "notificationDestination": self.user_mail,
                 "steps": [
                     {
@@ -239,7 +252,7 @@ class AsgardDeployer(object):
 
         data = {
             "deploymentOptions": {
-                "clusterName": self.app,
+                "clusterName": self.get_cluster_name(),
                 "notificationDestination": self.user_mail,
                 "steps": [
                     {
@@ -401,7 +414,7 @@ class AsgardDeployer(object):
         """
         resp = self.request("cluster/list.json", None)
         for cluster in json.loads(resp.text):
-            if cluster["cluster"] == self.app:
+            if cluster["cluster"] == self.get_cluster_name():
                 return cluster["autoScalingGroups"]
 
         return []  # there are no ASGs, so return an empty list
@@ -431,6 +444,7 @@ class AsgardDeployer(object):
 
     def create_loadbalancer(self, health_check, health_check_port):
         data = {
+            'stack': self.get_stack(),
             'appName': self.app,
             'selectedZones': ['eu-west-1a', 'eu-west-1b', 'eu-west-1c'],
             'selectedSecurityGroups': self.security_group,
@@ -461,7 +475,7 @@ class AsgardDeployer(object):
             return False
 
     def set_scheduler(self, version):
-        auto_scaling_group_name = "{0}".format(self.app)
+        auto_scaling_group_name = "{0}".format(self.get_cluster_name())
         if version:
             auto_scaling_group_name = version
 
@@ -503,7 +517,6 @@ class AsgardDeployer(object):
             health_check_port = 8000
 
         self.create_application_if_not_present()
-        self.elbs = []
 
         if self.elb:
             self.deploy_elb(health_check, health_check_port)
@@ -527,7 +540,7 @@ class AsgardDeployer(object):
             self.set_scheduler(version)
 
     def deploy_elb(self, health_check, health_check_port):
-        self.elbs = [self.app]
+        self.elbs = [self.get_cluster_name()]
 
         elb_data = self.get_or_create_loadbalancer_data(health_check, health_check_port)
 
