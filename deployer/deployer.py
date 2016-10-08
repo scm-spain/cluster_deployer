@@ -35,13 +35,15 @@ class AsgardDeployer(object):
         self.app = self.app.replace("-", "_")
         if self.elb:
             self.app = self.app.replace("_", "")
+            if len(self.elbs) == 0:
+                self.elbs.append(self.get_cluster_name())
 
     @staticmethod
     def defaults():
         return {
             'asgard_url': '',
             'elbs': [],
-            'elb': None,
+            'elb': False,
             'elb_dns': None,
             'hosted_zone_domain': '',
             'role': '',
@@ -540,8 +542,6 @@ class AsgardDeployer(object):
             self.set_scheduler(version)
 
     def deploy_elb(self, health_check, health_check_port):
-        self.elbs = [self.get_cluster_name()]
-
         elb_data = self.get_or_create_loadbalancer_data(health_check, health_check_port)
 
         self.validate_loadbalancer(elb_data, health_check, health_check_port)
