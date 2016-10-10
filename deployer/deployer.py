@@ -338,16 +338,12 @@ class AsgardDeployer(object):
         # wait until a instance are ready
         print("--> wait until a instance are ready")
         instances = self.get_instances_in_asg(version)
-        count = 0
         not_started = True
         while not_started:
             instances = self.get_instances_in_asg(version)
-            count += 1
-            if count > 20:
+
+            if len(instances) > 0:
                 not_started = False
-            else:
-                if len(instances) > 0:
-                    not_started = False
 
             if (datetime.datetime.now() - start).total_seconds() > wait_seconds and not_started:
                 return False
@@ -365,7 +361,6 @@ class AsgardDeployer(object):
             response = os.system("ping -c 1 " + hostname)
             if response == 0:
                 not_started = False
-
             if (datetime.datetime.now() - start).total_seconds() > wait_seconds and not_started:
                 return False
             time.sleep(30)
