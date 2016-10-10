@@ -356,7 +356,7 @@ class AsgardDeployer(object):
         hostname = None
         for instance in instances:
             if hostname is None:
-                hostname = instance["ec2Instance"]["publicIpAddress"]
+                hostname = instance["ec2Instance"]["publicDnsName"]
 
         # wait instance answer ping
         print("--> wait instance answer ping")
