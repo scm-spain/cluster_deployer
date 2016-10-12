@@ -178,29 +178,6 @@ class AsgardDeployer(object):
         return cluster_name
 
     def deploy_version(self, version):
-        print("--> PARAMS with eureka: "
-              "version={version}, "
-              "asgard_url={asgard_url}, "
-              "elbs={elbs}, "
-              "elb={elb}, "
-              "elb_dns={elb_dns}, "
-              "hosted_zone_domain={hosted_zone_domain}, "
-              "role={role}, "
-              "user_data={user_data}, "
-              "subnet_purpose_tag={subnet_purpose_tag}, "
-              "stack_label={stack_label}, "
-              "security_group={security_group} ".format(version=version,
-                                                        asgard_url=self.asgard_url,
-                                                        elbs=self.elbs,
-                                                        elb=self.elb,
-                                                        elb_dns=self.elb_dns,
-                                                        hosted_zone_domain=self.hosted_zone_name,
-                                                        role=self.role,
-                                                        user_data=self.user_data,
-                                                        subnet_purpose_tag=self.subnet_purpose_tag,
-                                                        stack_label=self.stack_label,
-                                                        security_group=self.security_group))
-
         data = {
             "deploymentOptions": {
                 "clusterName": self.get_cluster_name(),
@@ -264,34 +241,17 @@ class AsgardDeployer(object):
         return r.status_code == 200
 
     def deploy_version_without_eureka(self, version, health_check, health_check_port, remove_old):
-        print("--> PARAMS wo eureka: "
+        print("--> PARAMS: "
               "version={version}, "
               "health_check={health_check}, "
               "health_check_port={health_check_port}, "
-              "remove_old={remove_old}, "
-              "asgard_url={asgard_url}, "
-              "elbs={elbs}, "
-              "elb={elb}, "
-              "elb_dns={elb_dns}, "
-              "hosted_zone_domain={hosted_zone_domain}, "
-              "role={role}, "
-              "user_data={user_data}, "
-              "subnet_purpose_tag={subnet_purpose_tag}, "
-              "stack_label={stack_label}, "
-              "security_group={security_group} ".format(version=version,
-                                   health_check=health_check,
-                                   health_check_port=health_check_port,
-                                   remove_old=remove_old,
-                                   asgard_url=self.asgard_url,
-                                   elbs=self.elbs,
-                                   elb=self.elb,
-                                   elb_dns=self.elb_dns,
-                                   hosted_zone_domain=self.hosted_zone_name,
-                                   role=self.role,
-                                   user_data=self.user_data,
-                                   subnet_purpose_tag=self.subnet_purpose_tag,
-                                   stack_label=self.stack_label,
-                                   security_group=self.security_group))
+              "remove_old={remove_old}".format(version=version,
+                                               health_check=health_check,
+                                               health_check_port=health_check_port,
+                                               remove_old=remove_old))
+
+        for key in self.__dict__.keys():
+            print ("key name: " + key + " value:" + self.__dict__[key])
 
         data = {
             "deploymentOptions": {
