@@ -250,6 +250,9 @@ class AsgardDeployer(object):
                                                health_check_port=health_check_port,
                                                remove_old=remove_old))
 
+        for key in self.__dict__.keys():
+            print ("key name: " + key + " value:" + self.__dict__[key])
+
         data = {
             "deploymentOptions": {
                 "clusterName": self.get_cluster_name(),
