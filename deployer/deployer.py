@@ -236,7 +236,7 @@ class AsgardDeployer(object):
             }
         }
 
-        for i in range(1, 5):
+        for i in range(1, 10):
             print("start deploy version:{} try:{}".format(version, i))
 
             self.request("deployment/start", json.dumps(data))
@@ -304,7 +304,7 @@ class AsgardDeployer(object):
         }
 
         success = False
-        for i in range(1, 5):
+        for i in range(1, 10):
             print("start deploy version:{} try:{}".format(version, i))
 
             self.request("deployment/start", json.dumps(data))
@@ -332,6 +332,7 @@ class AsgardDeployer(object):
     def wait_for_auto_scaling_group_creation(self, asg_name):
         retries = 10
         wait_seconds = 10
+
         for r in range(retries):
             resp = self.request("autoScaling/show/{}.json".format(asg_name), None)
             if resp.status_code == 200:
@@ -339,7 +340,6 @@ class AsgardDeployer(object):
             time.sleep(wait_seconds)
 
         return False
-
 
     def remove_old_asg(self, new_asg_name):
         for asg_name in self.get_asg_names_in_cluster():
