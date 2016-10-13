@@ -236,11 +236,16 @@ class AsgardDeployer(object):
             }
         }
 
-        r = self.request("deployment/start", json.dumps(data))
+        for i in range(1, 5):
+            r = self.request("deployment/start", json.dumps(data))
+            print(r.text)
 
-        print(r.text)
+            good_deploy = self.wait_asg_ready(version=version,
+                                              health_check=None,
+                                              health_check_port=None)
 
-        return r.status_code == 200
+            if good_deploy:
+                break
 
     def deploy_version_without_eureka(self, version, health_check, health_check_port, remove_old):
         print("--> PARAMS: "
@@ -297,23 +302,23 @@ class AsgardDeployer(object):
             }
         }
 
-        request = self.request("deployment/start", json.dumps(data))
+        for i in range(1, 5):
+            request = self.request("deployment/start", json.dumps(data))
 
-        time.sleep(30)
+            time.sleep(30)
 
-        self.resize_asg(asg_name=version)
+            self.resize_asg(asg_name=version)
 
-        good_deploy = self.wait_asg_ready(version=version,
-                                          health_check=health_check,
-                                          health_check_port=health_check_port)
+            good_deploy = self.wait_asg_ready(version=version,
+                                              health_check=health_check,
+                                              health_check_port=health_check_port)
 
-        if good_deploy:
-            if remove_old:
-                self.remove_old_asg(new_asg_name=version)
-        else:
+            if good_deploy:
+                if remove_old:
+                    self.remove_old_asg(new_asg_name=version)
+
+        if not good_deploy:
             self.disable_asg(asg_name=version)
-
-        return request.status_code == 200
 
     def remove_old_asg(self, new_asg_name):
         for asg_name in self.get_asg_names_in_cluster():
