@@ -309,7 +309,7 @@ class AsgardDeployer(object):
 
             self.request("deployment/start", json.dumps(data))
 
-            success = self.wait_for_auto_scaling_group_creation(self.version)
+            success = self.wait_for_auto_scaling_group_creation(version)
             if success:
                 break
 
