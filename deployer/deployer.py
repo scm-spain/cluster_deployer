@@ -237,6 +237,8 @@ class AsgardDeployer(object):
         }
 
         for i in range(1, 5):
+            print("start deploy version:{} try:{}", version, i)
+
             r = self.request("deployment/start", json.dumps(data))
             print(r.text)
 
@@ -244,8 +246,11 @@ class AsgardDeployer(object):
                                               health_check=None,
                                               health_check_port=None)
 
+            print("End deploy version:{} try:{}", version, i)
+
             if good_deploy:
                 break
+            
 
     def deploy_version_without_eureka(self, version, health_check, health_check_port, remove_old):
         print("--> PARAMS: "
@@ -303,6 +308,8 @@ class AsgardDeployer(object):
         }
 
         for i in range(1, 5):
+            print("start deploy version:{} try:{}", version, i)
+
             request = self.request("deployment/start", json.dumps(data))
 
             time.sleep(30)
@@ -316,6 +323,8 @@ class AsgardDeployer(object):
             if good_deploy:
                 if remove_old:
                     self.remove_old_asg(new_asg_name=version)
+
+            print("End deploy version:{} try:{}", version, i)
 
         if not good_deploy:
             self.disable_asg(asg_name=version)
