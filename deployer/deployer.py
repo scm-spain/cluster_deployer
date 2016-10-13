@@ -333,7 +333,7 @@ class AsgardDeployer(object):
         retries = 10
         wait_seconds = 10
         for r in range(retries):
-            resp = self.request("/autoScaling/show/{}.json".format(asg_name), None)
+            resp = self.request("autoScaling/show/{}.json".format(asg_name), None)
             if resp.status_code == 200:
                 return True
             time.sleep(wait_seconds)
