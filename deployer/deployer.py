@@ -237,20 +237,16 @@ class AsgardDeployer(object):
         }
 
         for i in range(1, 5):
-            print("start deploy version:{} try:{}", version, i)
+            print("start deploy version:{} try:{}".format(version, i))
 
-            r = self.request("deployment/start", json.dumps(data))
-            print(r.text)
+            self.request("deployment/start", json.dumps(data))
 
-            good_deploy = self.wait_asg_ready(version=version,
-                                              health_check=None,
-                                              health_check_port=None)
-
-            print("End deploy version:{} try:{}", version, i)
-
-            if good_deploy:
+            success = self.wait_for_auto_scaling_group_creation(self.version)
+            if success:
                 break
-            
+
+        if not success:
+            raise Exception("Fucking asgard!")
 
     def deploy_version_without_eureka(self, version, health_check, health_check_port, remove_old):
         print("--> PARAMS: "
@@ -307,13 +303,17 @@ class AsgardDeployer(object):
             }
         }
 
+        success = False
         for i in range(1, 5):
-            print("start deploy version:{} try:{}", version, i)
+            print("start deploy version:{} try:{}".format(version, i))
 
-            request = self.request("deployment/start", json.dumps(data))
+            self.request("deployment/start", json.dumps(data))
 
-            time.sleep(30)
+            success = self.wait_for_auto_scaling_group_creation(self.version)
+            if success:
+                break
 
+        if success:
             self.resize_asg(asg_name=version)
 
             good_deploy = self.wait_asg_ready(version=version,
@@ -323,11 +323,23 @@ class AsgardDeployer(object):
             if good_deploy:
                 if remove_old:
                     self.remove_old_asg(new_asg_name=version)
+            else:
+                self.disable_asg(asg_name=version)
 
-            print("End deploy version:{} try:{}", version, i)
+        else:
+            raise Exception("Fucking asgard!")
 
-        if not good_deploy:
-            self.disable_asg(asg_name=version)
+    def wait_for_auto_scaling_group_creation(self, asg_name):
+        retries = 10
+        wait_seconds = 10
+        for r in range(retries):
+            resp = self.request("/autoScaling/show/{}.json".format(asg_name), None)
+            if resp.status_code == 200:
+                return True
+            time.sleep(wait_seconds)
+
+        return False
+
 
     def remove_old_asg(self, new_asg_name):
         for asg_name in self.get_asg_names_in_cluster():
