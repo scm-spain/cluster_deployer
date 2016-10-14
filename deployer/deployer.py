@@ -506,7 +506,7 @@ class AsgardDeployer(object):
 
         return True
 
-    def deploy(self, environment='pre', eureka=True, health_check=None, health_check_port=None, remove_old=True):
+    def deploy(self, environment='pre', eureka=True, health_check=None, health_check_port=None, remove_old=True, disable_scheduler=False):
         if health_check is None:
             health_check = 'healthcheck'
 
@@ -533,7 +533,7 @@ class AsgardDeployer(object):
                                                health_check_port=health_check_port,
                                                remove_old=remove_old)
 
-        if environment != 'pro':
+        if environment != 'pro' or not disable_scheduler:
             self.set_scheduler(version)
 
     def deploy_elb(self, health_check, health_check_port):
