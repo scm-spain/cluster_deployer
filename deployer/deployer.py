@@ -242,8 +242,8 @@ class AsgardDeployer(object):
 
             self.request("deployment/start", json.dumps(data))
 
-            #success = self.wait_for_auto_scaling_group_creation(version)
-            success = self.check_auto_scaling_group_creation(version)
+            success = self.wait_for_auto_scaling_group_creation(version)
+            #success = self.check_auto_scaling_group_creation(version)
             if success:
                 break
 
@@ -311,8 +311,8 @@ class AsgardDeployer(object):
 
             self.request("deployment/start", json.dumps(data))
 
-            #success = self.wait_for_auto_scaling_group_creation(version)
-            success = self.check_auto_scaling_group_creation(version)
+            success = self.wait_for_auto_scaling_group_creation(version)
+            #success = self.check_auto_scaling_group_creation(version)
             if success:
                 break
 
