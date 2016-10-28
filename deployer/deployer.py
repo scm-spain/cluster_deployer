@@ -13,7 +13,7 @@ import os
 import datetime
 
 from requests import ConnectionError
-from deployer.json_parser import check_asgard_stack_status
+#from deployer.json_parser import check_asgard_stack_status
 
 
 def printerr(msg):
@@ -332,16 +332,16 @@ class AsgardDeployer(object):
         else:
             raise Exception("Fucking asgard!")
 
-    def check_auto_scaling_group_creation(self, version):
-        retries = 10
-        wait_seconds = 10
-        url = "http://{0}".format(self.asgard_base_url)
-        for r in range(retries):
-            status = check_asgard_stack_status(url, version)
-            if status:
-                return True
-            time.sleep(wait_seconds)
-        return False
+    # def check_auto_scaling_group_creation(self, version):
+    #     retries = 10
+    #     wait_seconds = 10
+    #     url = "http://{0}".format(self.asgard_base_url)
+    #     for r in range(retries):
+    #         status = check_asgard_stack_status(url, version)
+    #         if status:
+    #             return True
+    #         time.sleep(wait_seconds)
+    #     return False
 
 
     def wait_for_auto_scaling_group_creation(self, asg_name):
