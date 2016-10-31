@@ -14,15 +14,18 @@ def decode_url_json(my_json):
     return str_response
 
 
-# Return True if the stack have the first entry with status completed or False in the other cases
+# It checks if the status is working progress, and return working,
+# Otherwise return the status of the stack. It only check the first entry on completedTaskList section.
 def check_stack_status(json_decoded, stack_name):
-    for iterator in json_decoded["completedTaskList"]:
+    for iterator in json_decoded["runningTaskList"]:
         if iterator["objectId"] == stack_name:
+            result = "working"
             break
-    if iterator["status"] == "completed":
-        result = True
-    else:
-        result = False
+    if result != "working":
+        for iterator in json_decoded["completedTaskList"]:
+            if iterator["objectId"] == stack_name:
+                result = iterator["status"]
+                break
     return result
 
 
