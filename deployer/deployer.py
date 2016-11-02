@@ -306,11 +306,12 @@ class AsgardDeployer(object):
         }
 
         success = False
+        wait_seconds_after_stack_start = 10
         for i in range(1, 10):
             print("start deploy version:{} try:{}".format(version, i))
 
             self.request("deployment/start", json.dumps(data))
-
+            time.sleep(wait_seconds_after_stack_start)
             #success = self.wait_for_auto_scaling_group_creation(version)
             success = self.check_auto_scaling_group_creation(version)
             if success:
