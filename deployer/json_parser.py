@@ -4,6 +4,7 @@ import requests
 
 def load_json_from_url(my_url):
     r = requests.get(url=my_url)
+    print("Retrieving asgard json from: {}".format(my_url))
     # print(r.json())
     return r.json()
 
