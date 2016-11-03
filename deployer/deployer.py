@@ -238,10 +238,8 @@ class AsgardDeployer(object):
         }
 
         for i in range(1, 10):
-            print("start deploy version:{} try:{}".format(version, i))
-
             self.request("deployment/start", json.dumps(data))
-
+            
             #success = self.wait_for_auto_scaling_group_creation(version)
             success = self.check_auto_scaling_group_creation(version)
             if success:
@@ -308,8 +306,6 @@ class AsgardDeployer(object):
         success = False
         wait_seconds_after_stack_start = 10
         for i in range(1, 10):
-            print("start deploy version:{} try:{}".format(version, i))
-
             self.request("deployment/start", json.dumps(data))
             time.sleep(wait_seconds_after_stack_start)
             #success = self.wait_for_auto_scaling_group_creation(version)
@@ -334,11 +330,13 @@ class AsgardDeployer(object):
             raise Exception("Fucking asgard!")
 
     def check_auto_scaling_group_creation(self, version):
+        normalized_version = version[:-5]
+        print("start deploy version:{}".format(normalized_version))
         retries = 10
         wait_seconds = 10
         url = "http://{0}".format(self.asgard_base_url)
         for r in range(retries):
-            status = check_asgard_stack_status(url, version)
+            status = check_asgard_stack_status(url, normalized_version)
             print("## MS {}".format(status))
             if status == "completed":
                 return True
