@@ -19,6 +19,7 @@ def decode_url_json(my_json):
 # Otherwise return the status of the stack. It only check the first entry on completedTaskList section.
 def check_stack_status(json_decoded, stack_name):
     result = None
+    print("Searching for stack: {}".format(stack_name))
     for iterator in json_decoded["runningTaskList"]:
         if iterator["objectId"] == stack_name:
             result = "working"
