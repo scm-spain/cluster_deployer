@@ -239,7 +239,7 @@ class AsgardDeployer(object):
 
         for i in range(1, 10):
             self.request("deployment/start", json.dumps(data))
-            
+
             #success = self.wait_for_auto_scaling_group_creation(version)
             success = self.check_auto_scaling_group_creation(version)
             if success:
@@ -332,7 +332,7 @@ class AsgardDeployer(object):
     def check_auto_scaling_group_creation(self, version):
         normalized_version = version[:-5]
         print("start deploy version:{}".format(normalized_version))
-        retries = 10
+        retries = 200
         wait_seconds = 10
         url = "http://{0}".format(self.asgard_base_url)
         for r in range(retries):
