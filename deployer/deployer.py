@@ -335,7 +335,7 @@ class AsgardDeployer(object):
         print("Start deploy version: {}".format(normalized_version))
         for r in range(retries):
             status = check_asgard_stack_status(url, normalized_version)
-            print("## MS {} retry: {}".format(status, retries))
+            print("## MS {} retry: {}".format(status, r))
             if status == "completed":
                 return True
             elif status == "failed":
