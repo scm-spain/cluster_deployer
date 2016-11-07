@@ -239,7 +239,7 @@ class AsgardDeployer(object):
 
         for i in range(1, 10):
             result = self.request("deployment/start", json.dumps(data))
-            print(result)
+            print(result.content)
             success = self.check_auto_scaling_group_creation(version)
             if success:
                 break
@@ -306,7 +306,7 @@ class AsgardDeployer(object):
         wait_seconds_after_stack_start = 10
         for i in range(1, 10):
             result = self.request("deployment/start", json.dumps(data))
-            print(result)
+            print(result.content)
             time.sleep(wait_seconds_after_stack_start)
             success = self.check_auto_scaling_group_creation(version)
             if success:
