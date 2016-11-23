@@ -13,6 +13,7 @@ import os
 import datetime
 
 from requests import ConnectionError
+from deployer.json_parser import check_asgard_stack_status
 
 
 def printerr(msg):
@@ -235,12 +236,9 @@ class AsgardDeployer(object):
                 "associatePublicIpAddress": True
             }
         }
-
-        r = self.request("deployment/start", json.dumps(data))
-
-        print(r.text)
-
-        return r.status_code == 200
+        success = self.deploy_to_asgard(data, version)
+        if not success:
+            raise Exception("Fucking asgard!")
 
     def deploy_version_without_eureka(self, version, health_check, health_check_port, remove_old):
         print("--> PARAMS: "
@@ -297,23 +295,58 @@ class AsgardDeployer(object):
             }
         }
 
-        request = self.request("deployment/start", json.dumps(data))
+        success = self.deploy_to_asgard(data, version)
+        if success:
+            self.resize_asg(asg_name=version)
 
-        time.sleep(30)
+            good_deploy = self.wait_asg_ready(version=version,
+                                              health_check=health_check,
+                                              health_check_port=health_check_port)
 
-        self.resize_asg(asg_name=version)
+            if good_deploy:
+                if remove_old:
+                    self.remove_old_asg(new_asg_name=version)
+            else:
+                self.disable_asg(asg_name=version)
 
-        good_deploy = self.wait_asg_ready(version=version,
-                                          health_check=health_check,
-                                          health_check_port=health_check_port)
-
-        if good_deploy:
-            if remove_old:
-                self.remove_old_asg(new_asg_name=version)
         else:
-            self.disable_asg(asg_name=version)
+            raise Exception("Fucking asgard!")
 
-        return request.status_code == 200
+    def deploy_to_asgard(self, data, version):
+        wait_seconds_after_stack_start = 10
+        retries = 0
+        success = False
+        while not success and retries < 10:
+            result = self.request("deployment/start", json.dumps(data))
+            id_task = json.loads(result.content)["deploymentId"]
+            time.sleep(wait_seconds_after_stack_start)
+            success = self.wait_until_task_finish(id_task)
+            if not success:
+                retries += 1
+                auto_scaling_check = self.check_for_auto_scaling_group_creation(version)
+                if auto_scaling_check:
+                    raise Exception("Error: Autoscaling is up, but instances not working propertly")
+                else:
+                    print("Autoscaling error")
+        return success
+
+    def wait_until_task_finish(self, id_task):
+        attempts = 0
+        wait_seconds = 10
+        url = "http://{0}".format(self.asgard_base_url)
+        status = ""
+        max_attempts = self.start_up_timeout_minutes * 60 / wait_seconds + 1
+        while attempts < max_attempts and not (status in ["completed", "failed"]):
+            attempts += 1
+            status = check_asgard_stack_status(url, id_task)
+            print("## MS {} attempt: {}".format(status, attempts))
+            time.sleep(wait_seconds)
+
+        return status == "completed"
+
+    def check_for_auto_scaling_group_creation(self, asg_name):
+        resp = self.request("autoScaling/show/{}.json".format(asg_name))
+        return resp.status_code == 200
 
     def remove_old_asg(self, new_asg_name):
         for asg_name in self.get_asg_names_in_cluster():
