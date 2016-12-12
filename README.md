@@ -27,9 +27,11 @@ Basically the constructor of AsgardDeployer receives a dictionary with the follo
 | Parameter                | Type    | Description                                      | Default     |
 | ------------------------ | ------- | ------------------------------------------------ | ----------- |
 | asgard_url               | String  | The asgard URL                                   | ''          |
-| elb                      | Boolean | If should deploy an ELB                          | False       |
+| create_elb               | Boolean | If should create a ELB                           | False       |
+| elb                      | Boolean | DEPRECATED: use create_elb parameter             | False       |
 | elb_dns                  | Boolean | If should be exposed via a DNS (Route53)         | False       |
-| elbs                     | list    | This parameter is used to attach existing elb's to the asg, this asg must exist previously and don't needs any other elb param | None        |
+| elbs_to_associate        | list    | This parameter is used to attach existing elb's to the asg, this asg must exist previously and don't needs any other elb param | None        |
+| elbs                     | list    | DEPRECATED: use elbs_to_associate parameter      | None        |
 | hosted_zone_domain       | String  | Route53 hosted zone if elb_dns=True              | ''          |
 | role                     | String  | IAM instance profile needed                      | None        |
 | user_mail                | String  | User mail to get notified of Asgard changes      | None        |
