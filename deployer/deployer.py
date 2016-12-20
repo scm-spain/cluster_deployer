@@ -42,10 +42,11 @@ class AsgardDeployer(object):
             self.elbs_to_associate.extend(self.elbs)
 
         if self.elb:
+            self.create_elb = self.elb
             print("[DEPRECATED] The param elb is deprecated, please use the new param create_elb")
         # #######################################################################
 
-        if self.elb or self.create_elb:
+        if self.create_elb:
             self.app = self.app.replace("_", "")
             self.elbs_to_associate.append(self.get_cluster_name())
 
