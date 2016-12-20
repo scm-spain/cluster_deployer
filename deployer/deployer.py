@@ -34,17 +34,30 @@ class AsgardDeployer(object):
             self.max_instances = self.min_instances
 
         self.app = self.app.replace("-", "_")
+
+        # DEPRECATED info #######################################################
+        if len(self.elbs) > 0:
+            print("[DEPRECATED] The param elbs is deprecated, please use the new param "
+                  "elbs_to_associate")
+            self.elbs_to_associate.extend(self.elbs)
+
         if self.elb:
+            self.create_elb = self.elb
+            print("[DEPRECATED] The param elb is deprecated, please use the new param create_elb")
+        # #######################################################################
+
+        if self.create_elb:
             self.app = self.app.replace("_", "")
-            if len(self.elbs) == 0:
-                self.elbs.append(self.get_cluster_name())
+            self.elbs_to_associate.append(self.get_cluster_name())
 
     @staticmethod
     def defaults():
         return {
             'asgard_url': '',
-            'elbs': [],
-            'elb': False,
+            'elbs': [],                 # DEPRECATED
+            'elbs_to_associate': [],
+            'elb': False,               # DEPRECATED
+            'create_elb': False,
             'elb_dns': None,
             'hosted_zone_domain': '',
             'role': '',
@@ -149,7 +162,7 @@ class AsgardDeployer(object):
             'kernelId': '',
             'ramdiskId': '',
             'iamInstanceProfile': self.role,
-            'selectedLoadBalancers': self.elbs
+            'selectedLoadBalancers': self.elbs_to_associate
         }
 
         r = self.request("autoScaling/save", data)
@@ -210,7 +223,7 @@ class AsgardDeployer(object):
                 "desiredCapacity": self.min_instances,
                 "defaultCooldown": 10,
                 "availabilityZones": ["eu-west-1c", "eu-west-1a", "eu-west-1b"],
-                "loadBalancerNames": self.elbs,
+                "loadBalancerNames": self.elbs_to_associate,
                 "healthCheckType": "EC2",
                 "healthCheckGracePeriod": 600,
                 "placementGroup": None,
@@ -268,7 +281,7 @@ class AsgardDeployer(object):
                 "desiredCapacity": self.min_instances,
                 "defaultCooldown": 10,
                 "availabilityZones": ["eu-west-1c", "eu-west-1a", "eu-west-1b"],
-                "loadBalancerNames": self.elbs,
+                "loadBalancerNames": self.elbs_to_associate,
                 "healthCheckType": "EC2",
                 "healthCheckGracePeriod": 600,
                 "placementGroup": None,
@@ -548,7 +561,7 @@ class AsgardDeployer(object):
 
         self.create_application_if_not_present()
 
-        if self.elb:
+        if self.create_elb:
             self.deploy_elb(health_check, health_check_port)
 
         version = self.get_next_version()
