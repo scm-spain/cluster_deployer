@@ -179,6 +179,8 @@ class AsgardDeployer(object):
             data = json.loads(str(r.text))
             return data["environment"]["nextGroupName"]
         else:
+            print("Couldn't get next version. This should happen when exists any subnet without "
+                  "purpose tag.")
             return None
 
     def get_stack(self):
